@@ -37,15 +37,10 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/', methods=['GET', 'POST', 'PUT'])
-def upload_file():
-    app.logger.info('Upload_file')
-    app.logger.info(request.method)
-    
+def upload_file():   
     if request.method == 'POST':
-        app.logger.info('POST')
         # check if the post request has the file part
         if 'file' not in request.files:
-            app.logger.info('file problem')
             flash('No file part')
             return redirect(request.url)
         file = request.files['file']
@@ -56,7 +51,6 @@ def upload_file():
             return redirect(request.url)
         if file and allowed_file(file.filename):
             print('allowed_file')
-            app.logger.info('ddddddd')
             filename = secure_filename(file.filename)
             blob = Blob(filename, BUCKET)    
             blob.upload_from_file(file)
@@ -72,12 +66,10 @@ def upload_file():
     </form>
     '''
 
-
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     uploaded_image_URI = "https://storage.googleapis.com/smiles-in-cloud/%s" % filename
     app.logger.info(uploaded_image_URI)
-
     ssc = SmileScoreCalculator(uploaded_image_URI)
     ssc.request_vision_api()
     caption = ssc.calculate_smile()
@@ -99,4 +91,3 @@ if __name__ == '__main__':
     # Engine, a webserver process such as Gunicorn will serve the app. This
     # can be configured by adding an `entrypoint` to app.yaml.
     app.run(host='127.0.0.1', port=8080, debug=True)
-# [END gae_python37_app]
