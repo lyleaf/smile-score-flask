@@ -1,4 +1,4 @@
-# Smile Score with Flask
+# Smile Score with Google App Engine (python3) and Flask
 
 Smile Score is a web app to help you calculate the score of your smile. Just for fun!
 It's using Google App Engine (python3) and Flask. 
