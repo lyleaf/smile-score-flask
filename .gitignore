@@ -1,0 +1,6 @@
+secret.py
+
+# Compiled source #
+*.pyc
+
+**/pycache

@@ -17,9 +17,16 @@ import os
 from flask import Flask, request, redirect, url_for
 from werkzeug.utils import secure_filename
 from flask import send_from_directory
+from smile_score_calculator import SmileScoreCalculator
+from google.cloud import storage
+from google.cloud.storage import Blob
+
+client = storage.Client(project="smile-score")
+BUCKET = client.get_bucket("smiles-in-cloud")
+
 
 UPLOAD_FOLDER = './'
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -29,11 +36,16 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST', 'PUT'])
 def upload_file():
+    app.logger.info('Upload_file')
+    app.logger.info(request.method)
+    
     if request.method == 'POST':
+        app.logger.info('POST')
         # check if the post request has the file part
         if 'file' not in request.files:
+            app.logger.info('file problem')
             flash('No file part')
             return redirect(request.url)
         file = request.files['file']
@@ -43,14 +55,17 @@ def upload_file():
             flash('No selected file')
             return redirect(request.url)
         if file and allowed_file(file.filename):
+            print('allowed_file')
+            app.logger.info('ddddddd')
             filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            blob = Blob(filename, BUCKET)    
+            blob.upload_from_file(file)
             return redirect(url_for('uploaded_file',
                                     filename=filename))
     return '''
     <!doctype html>
-    <title>Upload new File</title>
-    <h1>Upload new File</h1>
+    <title>Smile Score Calculator</title>
+    <h1>Upload image</h1>
     <form method=post enctype=multipart/form-data>
       <p><input type=file name=file>
          <input type=submit value=Upload>
@@ -60,8 +75,24 @@ def upload_file():
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'],
-                               filename)
+    uploaded_image_URI = "https://storage.googleapis.com/smiles-in-cloud/%s" % filename
+    app.logger.info(uploaded_image_URI)
+
+    ssc = SmileScoreCalculator(uploaded_image_URI)
+    ssc.request_vision_api()
+    caption = ssc.calculate_smile()
+
+    return '''<!DOCTYPE html>
+    <html>
+    <body>
+        <p>
+        %s
+        <img border="0" alt="uploaded image" src=%s width="100" height="150">
+        </a>
+        </p>
+    </body>
+    </html>
+''' % (caption, uploaded_image_URI)
 
 if __name__ == '__main__':
     # This is used when running locally only. When deploying to Google App
